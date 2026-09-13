@@ -2,17 +2,14 @@ use crate::config::{AgentConfigFile, DataType};
 use crate::metrics::*;
 use crate::platforms::os::methods::arguments::{Buffers, RequestBodyOptions};
 use crate::platforms::os::methods::{
-    build_request_body, collect_metrics_as_line_protocol,
-    create_metrics_struct_by_config, get_host, send_request,
+    build_request_body, collect_metrics_as_line_protocol, create_metrics_struct_by_config,
+    get_host, send_request,
 };
+use persona_exporter_types::metrics::ProcessInfo;
 use persona_exporter_types::metrics::traits::Clear;
-use persona_exporter_types::metrics::{ProcessInfo};
 use std::time::{Duration, SystemTime};
 use surf::{Client, RequestBuilder};
-use sysinfo::{
-    Components, Disks, Networks, Process, ProcessesToUpdate, System,
-    get_current_pid,
-};
+use sysinfo::{Components, Disks, Networks, Process, ProcessesToUpdate, System, get_current_pid};
 use tracing::info;
 use url::Url;
 
@@ -164,10 +161,7 @@ pub async fn collect_metrics_for_os(config: AgentConfigFile) {
                 // };
 
                 line_protocol_buffer.clear();
-                collect_metrics_as_line_protocol(
-                    &buffers.metrics,
-                    &mut line_protocol_buffer,
-                );
+                collect_metrics_as_line_protocol(&buffers.metrics, &mut line_protocol_buffer);
 
                 // line_protocol_buffer = String::from_utf8(collect_metrics_as_line_protocol(&line_protocol_options).to_vec()).unwrap_or_default();
                 info!(

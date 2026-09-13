@@ -4,22 +4,17 @@ use crate::config::AgentConfigFile;
 use crate::platforms::os::methods::arguments::RequestBodyOptions;
 use influxdb_line_protocol::LineProtocolBuilder;
 use persona_exporter_types::metrics::{
-    ComponentListInfo, CpuListInfo, DiskInfo, MemoryInfo, NetworkInfo,
-    ProcessListInfo, ServerMetrics, SystemInfo,
+    ComponentListInfo, CpuListInfo, DiskInfo, MemoryInfo, NetworkInfo, ProcessListInfo,
+    ServerMetrics, SystemInfo,
 };
 // use persona_exporter_types::traits::line_protocol::{FromWithMeasurement, IntoWithMeasurement};
-use persona_exporter_types::traits::line_protocol::{
-    FinishLineProtocol, FromWithMeasurement,
-};
+use persona_exporter_types::traits::line_protocol::{FinishLineProtocol, FromWithMeasurement};
 use std::collections::BTreeMap;
 use surf::post;
 use tracing::{debug, error, info};
 use url::Url;
 
-pub fn collect_metrics_as_line_protocol(
-    metrics: &ServerMetrics,
-    line_buffer: &mut Vec<u8>,
-) {
+pub fn collect_metrics_as_line_protocol(metrics: &ServerMetrics, line_buffer: &mut Vec<u8>) {
     let time = metrics.time;
     if let Some(ref system) = metrics.system {
         line_buffer.extend_from_slice(
@@ -48,14 +43,13 @@ pub fn collect_metrics_as_line_protocol(
                 .finish(time)
                 .as_slice(),
         );
-        cpu.cpu_cores.iter().for_each(
-            |cpu_core| {
-                line_buffer.extend_from_slice(LineProtocolBuilder::from_with_name(cpu_core, "mertics_cpu_cores")
+        cpu.cpu_cores.iter().for_each(|cpu_core| {
+            line_buffer.extend_from_slice(
+                LineProtocolBuilder::from_with_name(cpu_core, "mertics_cpu_cores")
                     .finish(time)
-                    .as_slice()
-                );
-            }
-        );
+                    .as_slice(),
+            );
+        });
     }
     if let Some(ref memory) = metrics.memory {
         line_buffer.extend_from_slice(
