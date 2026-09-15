@@ -18,4 +18,6 @@ jobs:
   release:
     if: github.ref_name == 'main'
     needs: build
+    permissions:
+      contents: write
     uses: ./.github/workflows/release.yml
