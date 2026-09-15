@@ -1,137 +1,21 @@
-name: Build and test
+name: Main pipeline
 
 on:
   push:
     branches:
-      - main
-  pull_request:
-    branches:
-      - main
       - develop
+      - main
 
 jobs:
   test:
-    name: Test code
-    runs-on: ubuntu-latest
-    steps:
-      - uses: 0DoubleDare/persona-exporter/.github/actions/checkout_and_install_rust@develop
-
-      - uses: swatinem/rust-cache@v2
-
-      - name: Test fmt
-        run: |
-          cargo fmt --all -- --check
-          cargo clippy -- -D warnings
-
-      - name: Test code
-        run: |
-          cargo test
-          cargo test --doc
+    uses: ./.github/workflows/test.yml
 
   build:
-    name: Build for ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref_name == 'main'
     needs: test
-    environment: persona-exporter
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact_name: persona-exporter
-            asset_name: persona-exporter-linux.tar.gz
-
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact_name: persona-exporter
-            asset_name: persona-exporter-macos.zip
-
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact_name: persona-exporter.exe
-            asset_name: persona-exporter-windows.zip
-
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact_name: persona-exporter-debian
-            asset_name: debian-package
-    steps:
-      - uses: 0DoubleDare/persona-exporter/.github/actions/checkout_and_install_rust@develop
-        with:
-          target: ${{ matrix.target }}
-
-      - uses: swatinem/rust-cache@v2
-
-      - name: Build project
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Prepare artifact for MacOS
-        if: matrix.os == 'macos-latest'
-        run: |
-          cd target/${{ matrix.target }}/release/
-          zip -r "../../../${{ matrix.asset_name }}" ${{ matrix.artifact_name}}
-
-      - name: Prepare artifact for Linux
-        if: matrix.os == 'ubuntu-latest' && matrix.asset_name == 'persona-exporter-linux.tar.gz'
-        run: |
-          cd target/${{ matrix.target }}/release
-          tar -czf ../../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
-
-      - name: Prepare artifact for Windows
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          Compress-Archive -Path "target\${{ matrix.target }}\release\${{ matrix.artifact_name }}" -DestinationPath "${{ github.workspace }}\${{ matrix.asset_name }}"
-
-      - name: Install cargo-deb
-        if: matrix.os == 'ubuntu-latest' && matrix.asset_name == 'debian-package'
-        uses: taiki-e/install-action@cargo-deb
-
-      - name: Create Debian package
-        if: matrix.os == 'ubuntu-latest' && matrix.asset_name == 'debian-package'
-        run: cargo-deb --target ${{ matrix.target }}
-
-      - name: Upload temporary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.asset_name }}
-          path: ${{ matrix.asset_name == 'debian-package' && 'target/debian/*.deb' || matrix.asset_name }}
-          retention-days: 1
+    uses: ./.github/workflows/build.yml
 
   release:
-    name: Release to Github Releases
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref_name == 'main'
     needs: build
-    runs-on: ubuntu-latest
-    environment: persona-exporter
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: persona-exporter*
-          merge-multiple: true
-
-      - name: Get version from Cargo.toml
-        id: version
-        run: |
-          VERSION=$(grep -E '^version = ' Cargo.toml | head -n 1 | cut -d '"' -f 2)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Upload release
-        uses: softprops/action-gh-release@v2
-        with:
-          #          Создание релиза как черновик
-          draft: true
-          files: persona-exporter*
-          generate_release_notes: true
-          tag_name: v${{ steps.version.outputs.version }}
-          name: Release v${{ steps.version.outputs.version }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    uses: ./.github/workflows/release.yml

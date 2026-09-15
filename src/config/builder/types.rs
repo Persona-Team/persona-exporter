@@ -22,6 +22,7 @@ pub struct MetricsConfig {
 pub struct ProcessListConfig {
     pub settings: CommonMetricSetting,
     pub process_limit: usize,
+    pub remove_dead_processes: bool,
     pub sort_by: ProcessSortBy,
     // pub sort_by: [Option<ProcessListSortConfig>; 5],
 }
@@ -78,10 +79,28 @@ pub struct AgentSection {
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct ServerSection {
+    pub push: SectionPushModel,
+    pub pull: SectionPullModel,
+    // pub url: String,
+    // pub retries_connection: Option<u32>,
+    // #[serde(default)]
+    // pub get_params: Vec<ParamField>,
+    // #[serde(default)]
+    // pub http_headers: Vec<HeaderField>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct SectionPullModel {
+    pub route: String,
+    pub host: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct SectionPushModel {
     pub url: String,
     pub retries_connection: Option<u32>,
     #[serde(default)]
-    pub get_params: Vec<ParamField>,
+    pub url_params: Vec<ParamField>,
     #[serde(default)]
     pub http_headers: Vec<HeaderField>,
 }
@@ -108,8 +127,8 @@ pub struct CommonMetricSetting {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum SendModel {
-    #[default]
     Pull,
+    #[default]
     Push,
 }
 
@@ -119,6 +138,7 @@ pub enum DataType {
     #[default]
     Json,
     LineProtocol,
+    // OpenMetrics,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
