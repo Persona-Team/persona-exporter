@@ -22,6 +22,7 @@ pub struct MetricsConfig {
 pub struct ProcessListConfig {
     pub settings: CommonMetricSetting,
     pub process_limit: usize,
+    pub remove_dead_processes: bool,
     pub sort_by: ProcessSortBy,
     // pub sort_by: [Option<ProcessListSortConfig>; 5],
 }

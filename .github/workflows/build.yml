@@ -1,0 +1,87 @@
+name: Build Project
+
+on:
+  workflow_call:
+
+
+jobs:
+  build:
+    name: Build project fot OSs
+    runs-on: ${{ matrics.runs-on }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            for: linux-archive
+            target: x86_64-unknown-linux-gnu
+            artifact_name: persona-exporter
+            asset_name: persona-exporter-linux.tar.gz
+
+          - runs-on: macos-latest
+            for: macos
+            target: x86_64-apple-darwin
+            artifact_name: persona-exporter
+            asset_name: persona-exporter-macos.zip
+
+          - runs-on: windows-latest
+            for: windows
+            target: x86_64-pc-windows-msvc
+            artifact_name: persona-exporter.exe
+            asset_name: persona-exporter-windows.zip
+
+          - runs-on: ubuntu-latest
+            for: debian
+            target: x86_64-unknown-linux-gnu
+            artifact_name: persona-exporter-debian
+            asset_name: debian-package
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust for OS
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "co-cache-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock**') }}"
+          save-if: 'true'
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare artifact for MacOS
+        if: matrix.for == 'macos'
+        run: |
+          cd target/${{ matrix.target }}/release/
+          zip -r "../../../${{ matrix.asset_name }}" ${{ matrix.artifact_name}}
+
+      - name: Prepare artifact for Linux
+        if: matrix.for == 'linux-archive'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar -czf ../../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+
+      - name: Prepare artifact for Windows
+        if: matrix.for == 'windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "target\${{ matrix.target }}\release\${{ matrix.artifact_name }}" -DestinationPath "${{ github.workspace }}\${{ matrix.asset_name }}"
+
+      - name: Install cargo-deb
+        if: matrix.for == 'debian'
+        uses: taiki-e/install-action@cargo-deb
+
+      - name: Create Debian package
+        if: matrix.for == 'debian'
+        run: cargo-deb --target ${{ matrix.target }}
+
+      - name: Upload temporary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name == 'debian-package' && 'target/debian/*.deb' || matrix.asset_name }}
+          retention-days: 1
+
+

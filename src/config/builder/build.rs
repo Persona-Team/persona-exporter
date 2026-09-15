@@ -55,6 +55,7 @@ impl Default for AgentConfigFile {
                 processes: ProcessListConfig {
                     settings: CommonMetricSetting::default(),
                     process_limit: 5,
+                    remove_dead_processes: true,
                     sort_by: ProcessSortBy::default(),
                 },
                 cpu: CpuConfig {
