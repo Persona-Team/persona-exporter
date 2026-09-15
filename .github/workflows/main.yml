@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    uses: ./.github/workflows/test.yml
+    uses: ./projects/persona-exporter-util/.github/workflows/test.yml
 
   build:
     if: github.ref_name == 'main'
