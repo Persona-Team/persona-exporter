@@ -39,12 +39,10 @@ pub fn collect_disk_metrics(disks: &mut Disks, mount_point: &str, disk_buffer: &
         .find(|disk| disk.mount_point() == Path::new(&mount_point));
 
     if let Some(disk) = disk {
-        disk_buffer
-            .name
-            .push_str(&disk.name().to_string_lossy().into_owned());
+        disk_buffer.name.push_str(&disk.name().to_string_lossy());
         disk_buffer
             .file_system
-            .push_str(&disk.file_system().to_string_lossy().into_owned());
+            .push_str(&disk.file_system().to_string_lossy());
         disk_buffer.kind.push_str(&disk.kind().to_string());
         disk_buffer.total_space = disk.total_space();
         disk_buffer.available_space = disk.available_space();
@@ -103,19 +101,19 @@ pub fn collect_components_metrics(
 pub fn collect_system_metrics(system_metrics_buffer: &mut SystemInfo) {
     system_metrics_buffer
         .name
-        .push_str(&System::name().as_deref().unwrap_or(DEFAULT_UNKNOWN_MESSAGE));
+        .push_str(System::name().as_deref().unwrap_or(DEFAULT_UNKNOWN_MESSAGE));
     system_metrics_buffer.kernel_version.push_str(
-        &System::kernel_version()
+        System::kernel_version()
             .as_deref()
             .unwrap_or(DEFAULT_UNKNOWN_MESSAGE),
     );
     system_metrics_buffer.os_version.push_str(
-        &System::os_version()
+        System::os_version()
             .as_deref()
             .unwrap_or(DEFAULT_UNKNOWN_MESSAGE),
     );
     system_metrics_buffer.host_name.push_str(
-        &System::host_name()
+        System::host_name()
             .as_deref()
             .unwrap_or(DEFAULT_UNKNOWN_MESSAGE),
     );
