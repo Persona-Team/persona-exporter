@@ -51,7 +51,7 @@ lto = "fat"
 strip = true
 panic = "abort"
 
-#[profile.release]`
+#[profile.release.yml]`
 #opt-level = 3
 #debug = true
 #codegen-units = 1
@@ -73,6 +73,6 @@ depends = "$auto, systemd"
 section = "utility"
 priority = "optional"
 #assets = [
-#    ["../../target/release/persona-exporter", "usr/bin/", "755"],
+#    ["../../target/release.yml/persona-exporter", "usr/bin/", "755"],
 #    { source = "README.md", dest = "usr/share/doc/persona-exporter/README", mode = "644" }
 #]

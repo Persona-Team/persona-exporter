@@ -1,0 +1,43 @@
+name: Test stage
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "co-cache-${{ hashFiles('**/Cargo.lock**') }}"
+          save-if: 'false'
+
+      - name: Test linting
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy -- -D warnings
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "co-cache-${{ hashFiles('**/Cargo.lock**') }}"
+          save-if: 'true'
+
+      - name: Test code
+        run: |
+          cargo test
+          cargo test --doc
