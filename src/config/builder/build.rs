@@ -2,35 +2,64 @@ use crate::config::*;
 use config::{Config, ConfigError};
 use config_shellexpand::TemplatedFile;
 use std::env;
+use std::fs::{create_dir_all, write};
 use std::path::PathBuf;
-use tracing::info;
+use tracing::{info, warn};
+
+const CONFIG_FILENAME: &str = "config.yaml";
 
 impl AgentConfigFile {
     pub fn new() -> Result<Self, ConfigError> {
-        let config_directory = env::var("PERSONA_EXPORTER_CONFIG_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                if cfg!(target_os = "linux") {
-                    PathBuf::from("/etc/persona-exporter")
-                } else {
-                    dirs::config_dir().unwrap_or_default()
-                }
-            });
-        let config_path = config_directory.join("config.yaml");
+        let config_path: PathBuf = {
+            env::var("PERSONA_EXPORTER_CONFIG_PATH")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| {
+                    if cfg!(target_os = "linux") {
+                        PathBuf::from("/etc/persona-exporter")
+                    } else {
+                        // For Windows
+                        PathBuf::from(
+                            env::var("ProgramData")
+                                .unwrap_or_else(|_| r"C:\Program Data".to_string()),
+                        )
+                        .join("PersonaMetrics")
+                        .join("PersonaExporter")
+                    }
+                    .join(CONFIG_FILENAME)
+                })
+        };
 
-        info!("Current config directory: {:?}", config_directory);
-        info!("You might change config directory through env var 'PERSONA_EXPORTER_CONFIG_DIR'");
+        if !config_path.exists() {
+            create_dir_all(&config_path)
+                .expect("Something went wrong. Failed to create directories");
+
+            let write_result = write(&config_path, include_str!("../config.example.yaml"));
+
+            match write_result {
+                Ok(_) => {
+                    info!("Successfully insert default config to {:?}", config_path);
+                }
+                Err(err) => {
+                    warn!(
+                        "Failed to insert default config to {:?}. File has been created, but still empty - {}",
+                        config_path, err
+                    );
+                }
+            }
+        }
+
+        info!("You might change config directory through env var 'PERSONA_EXPORTER_CONFIG_PATH'");
         info!("Current full config path: {:?}", config_path);
 
         Config::builder()
             .add_source(Config::try_from(&Self::default())?)
-            // .add_source(File::from_str(config_path.as_os_str().to_str().unwrap(), FileFormat::Yaml))
             .add_source(TemplatedFile::with_name(config_path).required(false))
             .add_source(config::Environment::with_prefix("PE").separator("__"))
             .build()?
             .try_deserialize()
     }
 }
+
 impl Default for AgentConfigFile {
     fn default() -> Self {
         AgentConfigFile {

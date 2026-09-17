@@ -1,0 +1,30 @@
+server:
+  push:
+    url: "http://localhost:8086/api/v2/write"
+    http_headers:
+      - key: "Content-Type"
+        value: "text-plain; charset=utf-8"
+      - key: "Authorization"
+        value: "Token ${INFLUX_DB_TOKEN}"
+    url_params:
+      - key: "org"
+        value: "nikita-group"
+      - key: "bucket"
+        value: "nikita-bucket"
+      - key: "precision"
+        value: "ns"
+
+agent:
+  data_type: "line_protocol"
+
+metrics:
+  cpu:
+    enabled: true
+  memory:
+    enabled: true
+  system:
+    enabled: true
+  disks:
+    enabled: true
+  processes:
+    enabled: true
