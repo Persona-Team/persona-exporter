@@ -1,5 +1,5 @@
 use persona_exporter::platforms::*;
-use std::env;
+
 #[cfg_attr(target_os = "none", no_std)]
 #[cfg_attr(target_os = "none", no_main)]
 #[cfg(target_os = "none")]
@@ -10,21 +10,18 @@ async fn main(spawner: embassy_executor::Spawner) {
 
 #[cfg(not(target_os = "none"))]
 use mimalloc::MiMalloc;
-use persona_exporter::config::SendModel;
 use persona_exporter::platforms::os::methods::{initial_tracing, load_config};
 use tracing::info;
+use persona_exporter::config::{MainCliArguments, SendModel};
+
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
-
 fn main() {
-    let debug_mode: bool = env::var("DEBUG")
-        .unwrap_or_else(|_| "true".to_string())
-        .parse()
-        .unwrap_or(true);
+    let args: MainCliArguments = argh::from_env();
 
-    initial_tracing(debug_mode);
+    initial_tracing(args.verbose);
 
-    let config = load_config();
+    let config = load_config(args.config);
     info!("Success initial configuration: {:#?}", config);
 
     smol::block_on(async {

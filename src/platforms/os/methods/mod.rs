@@ -1,4 +1,5 @@
 pub mod arguments;
+pub mod metrics;
 
 use crate::config::AgentConfigFile;
 use crate::platforms::os::methods::arguments::RequestBodyOptions;
@@ -10,6 +11,7 @@ use persona_exporter_types::metrics::{
 // use persona_exporter_types::traits::line_protocol::{FromWithMeasurement, IntoWithMeasurement};
 use persona_exporter_types::traits::line_protocol::{FinishLineProtocol, FromWithMeasurement};
 use std::collections::BTreeMap;
+use compact_str::CompactString;
 use surf::post;
 use tracing::{debug, error, info};
 use url::Url;
@@ -150,8 +152,8 @@ pub async fn send_request(request: surf::RequestBuilder, _client: &surf::Client)
     }
 }
 
-pub fn load_config() -> AgentConfigFile {
-    AgentConfigFile::new().unwrap_or_else(|err| {
+pub fn load_config(override_config_path: Option<CompactString>) -> AgentConfigFile {
+    AgentConfigFile::new_with(override_config_path).unwrap_or_else(|err| {
         error!("Something is wrong in your config file");
         panic!("{}", err);
     })

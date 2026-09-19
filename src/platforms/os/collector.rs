@@ -1,6 +1,8 @@
 use crate::config::{AgentConfigFile, DataType};
-use crate::metrics::*;
-use crate::platforms::os::methods::arguments::{Buffers, RequestBodyOptions};
+// use crate::metrics::*;
+use crate::platforms::os::methods::metrics::processes::*;
+
+use crate::platforms::os::methods::arguments::{Buffers, CommonMetricsInformation, RequestBodyOptions};
 use crate::platforms::os::methods::{
     build_request_body, collect_metrics_as_line_protocol, create_metrics_struct_by_config,
     get_host, send_request,
@@ -12,8 +14,49 @@ use surf::{Client, RequestBuilder};
 use sysinfo::{Components, Disks, Networks, Process, ProcessesToUpdate, System, get_current_pid};
 use tracing::info;
 use url::Url;
+use crate::platforms::os::methods::metrics::components::collect_components_metrics;
+use crate::platforms::os::methods::metrics::cpu::collect_cpus_metrics;
+use crate::platforms::os::methods::metrics::disk::collect_disk_metrics;
+use crate::platforms::os::methods::metrics::memory::collect_memory_metrics;
+use crate::platforms::os::methods::metrics::network::collect_network_metrics;
+use crate::platforms::os::methods::metrics::system::collect_system_metrics;
 
 pub async fn collect_metrics_for_os(config: AgentConfigFile) {
+    let mut sys = (config.metrics.cpu.settings.enabled
+        || config.metrics.memory.settings.enabled
+        || config.metrics.processes.settings.enabled
+        || config.metrics.system.settings.enabled)
+        .then(sysinfo::System::new);
+    let mut disks = config
+        .metrics
+        .disks
+        .settings
+        .enabled
+        .then(Disks::new_with_refreshed_list);
+    let mut networks = config
+        .metrics
+        .network
+        .settings
+        .enabled
+        .then(Networks::new_with_refreshed_list);
+    let mut components = config
+        .metrics
+        .components
+        .settings
+        .enabled
+        .then(Components::new_with_refreshed_list);
+
+    // let common_metrics = CommonMetricsInformation {
+    //     components: components,
+    //     networks: networks,
+    //     disks: disks,
+    //     system: sys,
+    // };
+
+
+
+
+
     info!("Exporter initialized");
     let additional_headers = &config.server.push.http_headers;
     let get_params = &config.server.push.url_params;
@@ -34,28 +77,7 @@ pub async fn collect_metrics_for_os(config: AgentConfigFile) {
     };
 
     info!("Starting persona-exporter");
-    let mut sys = (config.metrics.cpu.settings.enabled
-        || config.metrics.memory.settings.enabled
-        || config.metrics.processes.settings.enabled)
-        .then(sysinfo::System::new);
-    let mut disks = config
-        .metrics
-        .disks
-        .settings
-        .enabled
-        .then(Disks::new_with_refreshed_list);
-    let mut networks = config
-        .metrics
-        .network
-        .settings
-        .enabled
-        .then(Networks::new_with_refreshed_list);
-    let mut components = config
-        .metrics
-        .components
-        .settings
-        .enabled
-        .then(Components::new_with_refreshed_list);
+
 
     // let mut metrics: ServerMetrics;
     let mut line_protocol_buffer: Vec<u8> = Vec::new();
@@ -78,22 +100,23 @@ pub async fn collect_metrics_for_os(config: AgentConfigFile) {
     loop {
         info!("Collect metrics...");
 
+        // Метрики требующий sysinfo::System
         if let Some(ref mut s) = sys {
-            if let Some(ref mut mem_buf) = buffers.metrics.memory {
+            if let Some(ref mut mem_buf) = buffers.metrics.memory && config.metrics.memory.settings.enabled {
                 s.refresh_memory();
                 // mem_buf.clear_dynamic();
                 collect_memory_metrics(s, mem_buf);
             }
-            if let Some(ref mut cpu_buf) = buffers.metrics.cpu {
+            if let Some(ref mut cpu_buf) = buffers.metrics.cpu && config.metrics.cpu.settings.enabled {
                 s.refresh_cpu_all();
                 cpu_buf.clear_dynamic();
                 collect_cpus_metrics(s, physical_core_count, cpu_buf);
             }
-            if let Some(ref mut system_buf) = buffers.metrics.system {
+            if let Some(ref mut system_buf) = buffers.metrics.system && config.metrics.system.settings.enabled {
                 system_buf.clear_dynamic();
                 collect_system_metrics(system_buf);
             }
-            if let Some(ref mut process_list_buf) = buffers.metrics.process_list {
+            if let Some(ref mut process_list_buf) = buffers.metrics.process_list && config.metrics.processes.settings.enabled{
                 s.refresh_processes(
                     ProcessesToUpdate::All,
                     config.metrics.processes.remove_dead_processes,
@@ -149,42 +172,17 @@ pub async fn collect_metrics_for_os(config: AgentConfigFile) {
 
         match config.agent.data_type {
             DataType::LineProtocol => {
-                // line_protocol_options = ToLineProtocolOptions {
-                //     time,
-                //     system: buffers.metrics.system,
-                // memory: memory_info.unwrap_or_default(),
-                // disk: disk_info.unwrap_or_default(),
-                // network: network_info.unwrap_or_default(),
-                // cpu: cpu_info.unwrap_or_default(),
-                // components: components_info.unwrap_or_default(),
-                // processes_info: metrics.process_list.unwrap(),
-                // };
-
                 line_protocol_buffer.clear();
                 collect_metrics_as_line_protocol(&buffers.metrics, &mut line_protocol_buffer);
 
                 // line_protocol_buffer = String::from_utf8(collect_metrics_as_line_protocol(&line_protocol_options).to_vec()).unwrap_or_default();
-                info!(
-                    "Sending data to a specified URL: {:#?}",
-                    line_protocol_buffer
-                );
+                info!("Sending data to a specified URL",);
 
                 request = request
                     // .header(http::header::CONTENT_LENGTH.as_str(), &line_protocol_buffer.len().to_string())
                     .body_bytes(&line_protocol_buffer);
             }
             DataType::Json => {
-                // metrics = ServerMetrics {
-                //     system: system_info,
-                //     process_list: process_list_info,
-                //     memory: memory_info,
-                //     disk: disk_info,
-                //     network: network_info,
-                //     cpu: cpu_info,
-                //     components: components_info,
-                //     time: now_time,
-                // };
-
                 info!("Machine metrics: {:#?}", buffers.metrics);
 
                 // let json_metrics = serde_json::to_string(&machine_metrics).expect("Failed to serialize to json");

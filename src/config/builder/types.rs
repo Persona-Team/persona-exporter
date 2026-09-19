@@ -92,7 +92,8 @@ pub struct ServerSection {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct SectionPullModel {
     pub route: String,
-    pub host: String,
+    pub hostname: String,
+    pub port: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]

@@ -35,6 +35,7 @@ compact_str = { version = "0.10.0" }
 
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+argh = { version = "0.1.19", default-features = false, features = ["help"]}
 
 config = { version = "0.15.25", features = ["yaml"], default-features = false}
 config-shellexpand = {  version = "0.2.0", default-features = false }
