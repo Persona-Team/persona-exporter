@@ -1,6 +1,7 @@
+use compact_str::ToCompactString;
 use persona_exporter_types::DEFAULT_UNKNOWN_MESSAGE;
-use persona_exporter_types::metrics::{LoadAverage, SystemInfo};
 use sysinfo::System;
+use persona_exporter_types::metrics::structs::system::{LoadAverage, SystemInfo};
 
 pub fn collect_system_metrics(system_metrics_buffer: &mut SystemInfo) {
     system_metrics_buffer
@@ -31,7 +32,7 @@ pub fn collect_system_metrics(system_metrics_buffer: &mut SystemInfo) {
         .push_str(&System::distribution_id());
     system_metrics_buffer
         .distribution_id_like
-        .push(System::distribution_id_like().join(","));
+        .push(System::distribution_id_like().join(",").to_compact_string());
     system_metrics_buffer.boot_time = System::boot_time();
     system_metrics_buffer.uptime = System::uptime();
     system_metrics_buffer.load_average = LoadAverage::from(System::load_average());

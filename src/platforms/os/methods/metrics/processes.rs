@@ -1,24 +1,14 @@
 use std::cmp::Ordering;
-use persona_exporter_types::metrics::ProcessInfo;
 use sysinfo::{Pid, System};
+use persona_exporter_types::metrics::structs::processes::ProcessInfo;
+use persona_exporter_types::metrics::sysinfo::processes::FromWithNormalizeCpu;
 use crate::config::ProcessSortBy;
 
-pub fn get_process_by_id(sys: &System, pid: Pid, self_process: &mut ProcessInfo) {
+pub fn get_process_by_id(sys: &System, pid: Pid) -> ProcessInfo {
     let system_process = sys.process(pid).unwrap();
-    let process = ProcessInfo::from(system_process);
+    let process = ProcessInfo::from_with_cpu(system_process, sys.cpus().len() as f32);
 
-    self_process.status = process.status;
-    self_process.disk_usage = process.disk_usage;
-    self_process.cpu_usage = process.cpu_usage;
-    self_process.memory_usage = process.memory_usage;
-    self_process.virtual_memory = process.virtual_memory;
-    self_process.run_time = process.run_time;
-    self_process.start_time = process.start_time;
-
-    self_process.name.push_str(&process.name);
-    self_process.program_id.push_str(&process.program_id);
-    self_process.user_id.push_str(&process.user_id);
-    self_process.group_id.push_str(&process.group_id);
+    process
 }
 
 pub fn get_sort_closure(
@@ -36,19 +26,37 @@ pub fn get_sort_closure(
             |a: &ProcessInfo, b: &ProcessInfo| b.start_time.cmp(&a.start_time)
         }
         // default also contain ProcessSortBy::CpuUsage
-        _ => |a: &ProcessInfo, b: &ProcessInfo| b.cpu_usage.total_cmp(&a.cpu_usage),
+        _ => |a: &ProcessInfo, b: &ProcessInfo| b.global_cpu_usage.total_cmp(&a.global_cpu_usage),
     }
 }
 
-pub fn collect_process_list_info(
+pub fn write_process_info(process: ProcessInfo, buffer: &mut ProcessInfo) {
+    buffer.status = process.status;
+    buffer.disk_usage = process.disk_usage;
+
+    buffer.global_cpu_usage = process.global_cpu_usage;
+    buffer.cpu_usage_per_thread = process.cpu_usage_per_thread;
+    buffer.memory_usage = process.memory_usage;
+    buffer.virtual_memory = process.virtual_memory;
+    buffer.run_time = process.run_time;
+    buffer.start_time = process.start_time;
+
+    buffer.name.push_str(&process.name);
+    buffer.program_id.push_str(&process.program_id);
+    buffer.user_id.push_str(&process.user_id);
+    buffer.group_id.push_str(&process.group_id);
+}
+
+pub fn update_process_list_info(
     sys: &System,
     // process_list_buffer: &mut Vec<ProcessInfo>,
     process_list_buffer: &mut Vec<ProcessInfo>,
 ) {
+    process_list_buffer.clear();
     // let mut local_process_list_buffer = take(&mut process_list_struct.process_list);
 
     sys.processes().values().for_each(|process| {
-        process_list_buffer.push(ProcessInfo::from(process));
+        process_list_buffer.push(ProcessInfo::from_with_cpu(process, sys.cpus().len() as f32));
     });
 
     // let self_process_metrics: Option<ProcessInfo> = get_current_pid()

@@ -1,5 +1,5 @@
-use persona_exporter_types::metrics::MemoryInfo;
 use sysinfo::System;
+use persona_exporter_types::metrics::structs::memory::MemoryInfo;
 
 pub fn collect_memory_metrics(sys: &System, memory_buffer: &mut MemoryInfo) {
     memory_buffer.total_memory = sys.total_memory();
@@ -10,3 +10,5 @@ pub fn collect_memory_metrics(sys: &System, memory_buffer: &mut MemoryInfo) {
     memory_buffer.used_swap = sys.used_swap();
     memory_buffer.free_swap = sys.free_swap();
 }
+
+pub fn initial_memory_snapshot() {}

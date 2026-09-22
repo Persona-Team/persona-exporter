@@ -20,8 +20,10 @@ pub struct MetricsConfig {
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct ProcessListConfig {
+    #[serde(flatten)]
     pub settings: CommonMetricSetting,
     pub process_limit: usize,
+    pub include_exporter_metrics: bool,
     pub remove_dead_processes: bool,
     pub sort_by: ProcessSortBy,
     // pub sort_by: [Option<ProcessListSortConfig>; 5],

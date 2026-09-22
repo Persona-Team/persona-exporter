@@ -1,21 +1,25 @@
 server:
   push:
-    url: "http://localhost:8086/api/v2/write"
+    url: "https://example.com"
     http_headers:
       - key: "Content-Type"
-        value: "text-plain; charset=utf-8"
-      - key: "Authorization"
-        value: "Token ${INFLUX_DB_TOKEN}"
+        value: "application/json"
+    # Your url params, out: https://example.com?example=true&user_id=3
     url_params:
-      - key: "org"
-        value: "nikita-group"
-      - key: "bucket"
-        value: "nikita-bucket"
-      - key: "precision"
-        value: "ns"
+      - key: "example"
+        value: "true"
+      - key: "user_id"
+        value: "3"
+    # default - 5
+    send_interval: 5
+  pull:
+    # Not available
 
 agent:
-  data_type: "line_protocol"
+  # "line_protocol" "json"
+  data_type: "json"
+  # "push" "pull" (soon)
+  send_model: "push"
 
 metrics:
   cpu:
@@ -27,4 +31,8 @@ metrics:
   disks:
     enabled: true
   processes:
+    enabled: true
+  networks:
+    enabled: true
+  components:
     enabled: true

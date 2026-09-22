@@ -14,9 +14,10 @@ reqwless = "0.14.0"
 
 # Crates for PC (Linux, Windows, MacOS)
 [target.'cfg(not(target_os = "none"))'.dependencies]
-#persona-exporter-types = { version = "2.1.1", features = ["full"] }
-persona-exporter-types = { version = "2.2.1", features = ["full"]}
-influxdb-line-protocol = "2.0.0"
+persona-exporter-types = { path = "../persona-exporter-types", features = ["full"] }
+#persona-exporter-types = { version = "2.2.1", features = ["full"]}
+
+influxdb-line-protocol = { version = "2.0.0" }
 sysinfo = { version = "0.39.3", features = ["system", "disk", "component", "network", "linux-netdevs"], default-features = false }
 smol = "2.0.2"
 surf = { version = "2.3.2", features = ["h1-client-rustls"], default-features = false}

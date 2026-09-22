@@ -38,9 +38,11 @@ impl AgentConfigFile {
 
         if !config_path.exists() {
             // Require SUDO for write in systems directories
-            create_dir_all(&config_path)
-                .expect("Something went wrong. Failed to create directories");
+            if let Some(parent) = &config_path.parent() {
+                create_dir_all(parent).expect("Failed to create directories");
+            }
 
+            std::fs::File::create(&config_path).expect("Failed to create file");
 
             let write_result = write(&config_path, include_str!("../config.example.yaml"));
 
@@ -95,6 +97,7 @@ impl Default for AgentConfigFile {
                 processes: ProcessListConfig {
                     settings: CommonMetricSetting::default(),
                     process_limit: 5,
+                    include_exporter_metrics: false,
                     remove_dead_processes: true,
                     sort_by: ProcessSortBy::default(),
                 },

@@ -4,10 +4,6 @@ pub mod metrics;
 use crate::config::AgentConfigFile;
 use crate::platforms::os::methods::arguments::RequestBodyOptions;
 use influxdb_line_protocol::LineProtocolBuilder;
-use persona_exporter_types::metrics::{
-    ComponentListInfo, CpuListInfo, DiskInfo, MemoryInfo, NetworkInfo, ProcessListInfo,
-    ServerMetrics, SystemInfo,
-};
 // use persona_exporter_types::traits::line_protocol::{FromWithMeasurement, IntoWithMeasurement};
 use persona_exporter_types::traits::line_protocol::{FinishLineProtocol, FromWithMeasurement};
 use std::collections::BTreeMap;
@@ -15,6 +11,14 @@ use compact_str::CompactString;
 use surf::post;
 use tracing::{debug, error, info};
 use url::Url;
+use persona_exporter_types::metrics::structs::components::ComponentListInfo;
+use persona_exporter_types::metrics::structs::cpu::CpuListInfo;
+use persona_exporter_types::metrics::structs::disk::StorageListInfo;
+use persona_exporter_types::metrics::structs::memory::MemoryInfo;
+use persona_exporter_types::metrics::structs::network::NetworkInfo;
+use persona_exporter_types::metrics::structs::processes::{ProcessInfo, ProcessListInfo};
+use persona_exporter_types::metrics::structs::server::ServerMetrics;
+use persona_exporter_types::metrics::structs::system::SystemInfo;
 
 pub fn collect_metrics_as_line_protocol(metrics: &ServerMetrics, line_buffer: &mut Vec<u8>) {
     let time = metrics.time;
@@ -26,11 +30,20 @@ pub fn collect_metrics_as_line_protocol(metrics: &ServerMetrics, line_buffer: &m
         );
     }
     if let Some(ref disk) = metrics.disk {
-        line_buffer.extend_from_slice(
-            LineProtocolBuilder::from_with_name(disk, "metrics_disk")
-                .finish(time)
-                .as_slice(),
-        );
+        for mount_point in disk.storage_list.iter() {
+            line_buffer.extend_from_slice(
+                LineProtocolBuilder::from_with_name(mount_point, "metrics_storage_mount_point")
+                    .finish(time)
+                    .as_slice(),
+            );
+        }
+        // disk.disk_list.iter().for_each(|d| {
+        //     line_buffer.extend_from_slice(
+        //         LineProtocolBuilder::from_with_name(d, "metrics_disk_info")
+        //             .finish(time)
+        //             .as_slice()
+        //     );
+        // });
     }
     if let Some(ref network) = metrics.network {
         line_buffer.extend_from_slice(
@@ -47,7 +60,7 @@ pub fn collect_metrics_as_line_protocol(metrics: &ServerMetrics, line_buffer: &m
         );
         cpu.cpu_cores.iter().for_each(|cpu_core| {
             line_buffer.extend_from_slice(
-                LineProtocolBuilder::from_with_name(cpu_core, "mertics_cpu_cores")
+                LineProtocolBuilder::from_with_name(cpu_core, "metrics_cpu_cores")
                     .finish(time)
                     .as_slice(),
             );
@@ -78,13 +91,20 @@ pub fn collect_metrics_as_line_protocol(metrics: &ServerMetrics, line_buffer: &m
                     .as_slice(),
             );
         });
-        processes.exporter_metrics.iter().for_each(|self_process| {
+        if let Some(ref self_metrics) = processes.exporter_metrics {
             line_buffer.extend_from_slice(
-                LineProtocolBuilder::from_with_name(self_process, "metrics_process_list")
+                LineProtocolBuilder::from_with_name(self_metrics, "metrics_exporter_monitoring")
                     .finish(time)
-                    .as_slice(),
+                    .as_slice()
             );
-        });
+        }
+        // processes.exporter_metrics.iter().for_each(|self_process| {
+        //     processes.exporter_metrics.extend_from_slice(
+        //         LineProtocolBuilder::from_with_name(self_process, "metrics_exporter_monitoring")
+        //             .finish(time)
+        //             .as_slice(),
+        //     );
+        // });
     }
 }
 
@@ -133,13 +153,13 @@ pub async fn send_request(request: surf::RequestBuilder, _client: &surf::Client)
     let response = request.send().await;
 
     match response {
-        Ok(mut success_response) => {
+        Ok(success_response) => {
             let response_status = success_response.status();
             debug!("{:#?}", success_response);
-            info!(
-                "{}",
-                success_response.body_string().await.unwrap_or_default()
-            );
+            // info!(
+            //     "{}",
+            //     success_response.body_string().await.unwrap_or_default()
+            // );
             info!(
                 "Response status: {} \"{}\"",
                 response_status as u16,
@@ -188,7 +208,10 @@ pub fn create_metrics_struct_by_config(config: &AgentConfigFile) -> ServerMetric
             .processes
             .settings
             .enabled
-            .then(ProcessListInfo::default),
+            .then( || ProcessListInfo {
+                exporter_metrics: config.metrics.processes.include_exporter_metrics.then(ProcessInfo::default),
+                process_list: Vec::new(),
+            }),
         memory: config
             .metrics
             .memory
@@ -200,7 +223,7 @@ pub fn create_metrics_struct_by_config(config: &AgentConfigFile) -> ServerMetric
             .disks
             .settings
             .enabled
-            .then(DiskInfo::default),
+            .then(StorageListInfo::default),
         network: config
             .metrics
             .network
@@ -222,5 +245,3 @@ pub fn create_metrics_struct_by_config(config: &AgentConfigFile) -> ServerMetric
         time: 0,
     }
 }
-
-// pub fn parse_cli_arguments()

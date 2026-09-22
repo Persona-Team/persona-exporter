@@ -1,6 +1,6 @@
 use persona_exporter_types::DEFAULT_UNKNOWN_MESSAGE;
-use persona_exporter_types::metrics::NetworkInfo;
 use sysinfo::Networks;
+use persona_exporter_types::metrics::structs::network::NetworkInfo;
 
 pub fn collect_network_metrics(networks: &mut Networks, network_info_buffer: &mut NetworkInfo) {
     let main_interface = networks
