@@ -12,7 +12,7 @@ server:
         value: "3"
     # default - 5
     send_interval: 5
-  pull:
+  # pull:
     # Not available
 
 agent:
